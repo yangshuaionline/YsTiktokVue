@@ -23,11 +23,10 @@
               <el-button type="primary" :disabled="!(phone && code)" @click="login" class="login_btn">登录</el-button>
             </el-container>
           </el-container>
-
         </el-main>
       </el-container>
+      <my-dialog ref="myDialog"></my-dialog>
     </div>
-
   </div>
 </template>
   
@@ -36,7 +35,12 @@ import { defineComponent, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import PhoneUtils from '@/utils/PhoneUtils'
 import router from '@/router'
+import axios from 'axios'
+import MyDialog from '@/components/MyDialog.vue'
 export default defineComponent({
+  components: {
+    MyDialog,
+  },
   name: 'LoginView',
   setup() {
     const phone = ref<string>('')
@@ -46,10 +50,28 @@ export default defineComponent({
     const buttonText = ref<string>('发送验证码')
 
     const sendCode = () => {
-      const text = phone.value
       if (!phone.value) {
         ElMessage.warning('请输入手机号')
       } else if (PhoneUtils.isValidPhoneNumber(phone.value)) {
+        axios
+          .get('http://192.168.1.207:8080/login/getCode', {
+            params: {
+              phone: phone.value,
+              type: '1',
+            },
+          })
+          .then((res) => {
+            if (res.status == 200) {
+              handleClick(res.data.msg)
+              console.log('===>', res)
+            } else {
+              console.log('===>', res)
+            }
+          })
+          .catch((error) => {
+            // error
+            console.log('网络请求错误===>', error)
+          })
         // 发送短信验证码
         isCounting.value = true
         let timer = setInterval(() => {
@@ -85,7 +107,12 @@ export default defineComponent({
         router.push({ path: '/' })
       }
     }
+    const myDialog = ref<typeof MyDialog>()
 
+    // 点击按钮时打开弹窗
+    function handleClick(msg: string) {
+      myDialog.value?.showDialog(msg)
+    }
     return {
       phone,
       code,
@@ -94,6 +121,8 @@ export default defineComponent({
       buttonText,
       sendCode,
       login,
+      myDialog,
+      handleClick,
     }
   },
   watch: {
