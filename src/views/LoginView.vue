@@ -35,8 +35,11 @@ import { defineComponent, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import PhoneUtils from '@/utils/PhoneUtils'
 import router from '@/router'
-import axios from 'axios'
 import MyDialog from '@/components/MyDialog.vue'
+import apiGetCode from '@/param/GetCodeParams'
+import apiSetLogin from '@/param/SetLoginParams'
+import userManager from '@/manager/UserManager'
+import { Users } from '@/bean/UserBean'
 export default defineComponent({
   components: {
     MyDialog,
@@ -48,43 +51,36 @@ export default defineComponent({
     const isCounting = ref<boolean>(false)
     const countDown = ref<number>(60)
     const buttonText = ref<string>('发送验证码')
-
     const sendCode = () => {
       if (!phone.value) {
         ElMessage.warning('请输入手机号')
       } else if (PhoneUtils.isValidPhoneNumber(phone.value)) {
-        axios
-          .get('http://192.168.1.207:8080/login/getCode', {
-            params: {
-              phone: phone.value,
-              type: '1',
-            },
-          })
-          .then((res) => {
-            if (res.status == 200) {
-              handleClick(res.data.msg)
-              console.log('===>', res)
-            } else {
-              console.log('===>', res)
-            }
+        apiGetCode({
+          phone: phone.value,
+          code_type: 1,
+        })
+          .then((data) => {
+            // console.log('00000===>' + res)
+            handleClick(data.toString())
+            // 发送短信验证码
+            isCounting.value = true
+            let timer = setInterval(() => {
+              countDown.value--
+              if (countDown.value === 0) {
+                clearInterval(timer)
+                isCounting.value = false
+                countDown.value = 60
+                buttonText.value = '重新发送'
+              } else {
+                buttonText.value = `${countDown.value}s`
+              }
+            }, 1000)
           })
           .catch((error) => {
             // error
+            handleClick(error)
             console.log('网络请求错误===>', error)
           })
-        // 发送短信验证码
-        isCounting.value = true
-        let timer = setInterval(() => {
-          countDown.value--
-          if (countDown.value === 0) {
-            clearInterval(timer)
-            isCounting.value = false
-            countDown.value = 60
-            buttonText.value = '重新发送'
-          } else {
-            buttonText.value = `${countDown.value}s`
-          }
-        }, 1000)
       } else {
         ElMessage.warning('请输入正确手机号')
       }
@@ -100,11 +96,27 @@ export default defineComponent({
       } else if (code.value.length < 6) {
         ElMessage.warning('请输入完整验证码')
       } else {
-        // 处理登录逻辑
-        ElMessage.success('登录成功')
-        //储存token
-        localStorage.setItem('Authorization', '123')
-        router.push({ path: '/' })
+        apiSetLogin({
+          phone: phone.value,
+          code: parseInt(code.value),
+          login_type: 1,
+        })
+          .then((data) => {
+            const user = data as unknown as Users
+            // 存储token
+            userManager.setAccount(user.account)
+            // 处理登录逻辑
+            ElMessage.success('登录成功')
+            //储存token
+            localStorage.setItem('Authorization', '123')
+            router.push({ path: '/' })
+          })
+          .catch((error) => {
+            // error
+
+            handleClick(error)
+            console.log('网络请求错误===>', error)
+          })
       }
     }
     const myDialog = ref<typeof MyDialog>()
