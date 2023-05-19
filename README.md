@@ -31,7 +31,13 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 ### 页面
 
 - LoginView.vue 登录页面（done）
+
+> 手机号验证、验证码登录、发送验证码倒计时
+
 - HomeVue.vue 主页（doing）
+
+> 上方title，左边列表，右边子页面
+
 - AboutVue.vue 关于我们（暂时无用）
 
 ### 结构说明

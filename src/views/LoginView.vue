@@ -40,6 +40,7 @@ import apiGetCode from '@/param/GetCodeParams'
 import apiSetLogin from '@/param/SetLoginParams'
 import userManager from '@/manager/UserManager'
 import { Users } from '@/bean/UserBean'
+import { ApiResponse } from '@/request'
 export default defineComponent({
   components: {
     MyDialog,
@@ -60,21 +61,25 @@ export default defineComponent({
           code_type: 1,
         })
           .then((data) => {
-            // console.log('00000===>' + res)
-            handleClick(data.toString())
-            // 发送短信验证码
-            isCounting.value = true
-            let timer = setInterval(() => {
-              countDown.value--
-              if (countDown.value === 0) {
-                clearInterval(timer)
-                isCounting.value = false
-                countDown.value = 60
-                buttonText.value = '重新发送'
-              } else {
-                buttonText.value = `${countDown.value}s`
-              }
-            }, 1000)
+            const res = data as unknown as ApiResponse<string>
+            if (res.code == 200) {
+              handleClick(res.data)
+              // 发送短信验证码
+              isCounting.value = true
+              let timer = setInterval(() => {
+                countDown.value--
+                if (countDown.value === 0) {
+                  clearInterval(timer)
+                  isCounting.value = false
+                  countDown.value = 60
+                  buttonText.value = '重新发送'
+                } else {
+                  buttonText.value = `${countDown.value}s`
+                }
+              }, 1000)
+            } else {
+              handleClick(res.message)
+            }
           })
           .catch((error) => {
             // error
@@ -102,27 +107,31 @@ export default defineComponent({
           login_type: 1,
         })
           .then((data) => {
-            const user = data as unknown as Users
-            // 存储token
-            userManager.setAccount(user.account)
-            // 处理登录逻辑
-            ElMessage.success('登录成功')
-            //储存token
-            localStorage.setItem('Authorization', '123')
-            router.push({ path: '/' })
+            const res = data as unknown as ApiResponse<Users>
+            if (res.code == 200) {
+              const user = data.data as unknown as Users
+              // 存储token
+              userManager.setAccount(user.account)
+              // 处理登录逻辑
+              ElMessage.success('登录成功')
+              //储存token
+              localStorage.setItem('Authorization', '123')
+              router.push({ path: '/' })
+            } else {
+              handleClick(res.message)
+            }
           })
           .catch((error) => {
             // error
-
-            handleClick(error)
-            console.log('网络请求错误===>', error)
+            handleClick('业务错误' + error)
+            console.log(error)
           })
       }
     }
     const myDialog = ref<typeof MyDialog>()
 
     // 点击按钮时打开弹窗
-    function handleClick(msg: string) {
+    const handleClick = (msg: string) => {
       myDialog.value?.showDialog(msg)
     }
     return {
